@@ -1,48 +1,60 @@
--- SQL Code for School Library Management System
+-- Original school library tables
 
--- Table for Books
-CREATE TABLE Books (
+CREATE TABLE IF NOT EXISTS Books (
     BookID INT PRIMARY KEY,
     Title VARCHAR(255) NOT NULL,
     Author VARCHAR(255) NOT NULL,
-    Genre VARCHAR(100),
-    ISBN VARCHAR(20) UNIQUE NOT NULL,
-    PublishedDate DATE
+    ISBN VARCHAR(50) NOT NULL,
+    PublishedYear INT
 );
 
--- Table for Members
-CREATE TABLE Members (
-    MemberID INT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS Students (
+    StudentID INT PRIMARY KEY,
     Name VARCHAR(255) NOT NULL,
-    Email VARCHAR(255) UNIQUE NOT NULL,
-    Phone VARCHAR(15),
-    MembershipDate DATE
+    Email VARCHAR(255) NOT NULL
 );
 
--- Table for Transactions
-CREATE TABLE Transactions (
-    TransactionID INT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS Loans (
+    LoanID INT PRIMARY KEY,
     BookID INT,
-    MemberID INT,
-    DateIssued DATE NOT NULL,
-    DueDate DATE NOT NULL,
+    StudentID INT,
+    LoanDate DATE,
     ReturnDate DATE,
     FOREIGN KEY (BookID) REFERENCES Books(BookID),
-    FOREIGN KEY (MemberID) REFERENCES Members(MemberID)
+    FOREIGN KEY (StudentID) REFERENCES Students(StudentID)
 );
 
--- Index for quick search
-CREATE INDEX idx_author ON Books (Author);
+-- New tables for connecting with other libraries
 
--- Sample Insert Queries
-INSERT INTO Books (BookID, Title, Author, Genre, ISBN, PublishedDate) VALUES 
-(1, 'The Great Gatsby', 'F. Scott Fitzgerald', 'Fiction', '9780743273565', '1925-04-10'),
-(2, '1984', 'George Orwell', 'Dystopian', '9780451524935', '1949-06-08');
+CREATE TABLE IF NOT EXISTS PartnerLibraries (
+    PartnerID INT PRIMARY KEY,
+    LibraryName VARCHAR(255) NOT NULL,
+    ContactPerson VARCHAR(255),
+    Phone VARCHAR(50),
+    Email VARCHAR(255)
+);
 
-INSERT INTO Members (MemberID, Name, Email, Phone, MembershipDate) VALUES 
-(1, 'John Doe', 'john@example.com', '1234567890', '2023-02-19'),
-(2, 'Jane Smith', 'jane@example.com', '0987654321', '2023-02-19');
+CREATE TABLE IF NOT EXISTS BookSharingAgreements (
+    AgreementID INT PRIMARY KEY,
+    PartnerID INT,
+    StartDate DATE,
+    EndDate DATE,
+    FOREIGN KEY (PartnerID) REFERENCES PartnerLibraries(PartnerID)
+);
 
-INSERT INTO Transactions (TransactionID, BookID, MemberID, DateIssued, DueDate) VALUES 
-(1, 1, 1, '2023-02-19', '2023-03-05'),
-(2, 2, 2, '2023-02-19', '2023-03-05');
+CREATE TABLE IF NOT EXISTS InterLibraryLoans (
+    LoanID INT PRIMARY KEY,
+    BookID INT,
+    PartnerID INT,
+    LoanDate DATE,
+    ReturnDate DATE,
+    FOREIGN KEY (BookID) REFERENCES Books(BookID),
+    FOREIGN KEY (PartnerID) REFERENCES PartnerLibraries(PartnerID)
+);
+
+CREATE TABLE IF NOT EXISTS SharedResources (
+    ResourceID INT PRIMARY KEY,
+    Description TEXT,
+    PartnerID INT,
+    FOREIGN KEY (PartnerID) REFERENCES PartnerLibraries(PartnerID)
+);
