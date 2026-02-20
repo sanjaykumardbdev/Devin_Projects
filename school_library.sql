@@ -1,1 +1,86 @@
--- FineManagement Table to track overdue fees\nCREATE TABLE FineManagement (\n    id INT AUTO_INCREMENT PRIMARY KEY,\n    book_id INT NOT NULL,\n    user_id INT NOT NULL,\n    overdue_days INT NOT NULL,\n    fine_amount DECIMAL(10, 2) NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (book_id) REFERENCES Books(id),\n    FOREIGN KEY (user_id) REFERENCES Users(id)\n);\n\n-- Trigger to automatically calculate fines\nCREATE TRIGGER calculate_fine\nAFTER INSERT ON BorrowedBooks\nFOR EACH ROW\nBEGIN\n    DECLARE overdue_days INT;\n    DECLARE fine_amount DECIMAL(10, 2);\n    \n    SET overdue_days = DATEDIFF(CURRENT_DATE, NEW.due_date);\n    \n    IF overdue_days > 10 THEN\n        SET fine_amount = (overdue_days - 10) * 1.00; -- Assuming 1.00 per day after 10 days\n        INSERT INTO FineManagement (book_id, user_id, overdue_days, fine_amount)\n        VALUES (NEW.book_id, NEW.user_id, overdue_days, fine_amount);\n    END IF;\nEND;\n\n-- Stored Procedure to calculate late fees\nDELIMITER //\nCREATE PROCEDURE CalculateLateFees(IN book_id INT, IN user_id INT)\nBEGIN\n    DECLARE overdue_days INT;\n    DECLARE fine_amount DECIMAL(10, 2);\n    \n    SELECT DATEDIFF(CURRENT_DATE, due_date) INTO overdue_days\n    FROM BorrowedBooks\n    WHERE book_id = book_id AND user_id = user_id;\n\n    IF overdue_days > 10 THEN\n        SET fine_amount = (overdue_days - 10) * 1.00; -- Assuming 1.00 per day after 10 days\n        SELECT fine_amount AS LateFee;\n    ELSE\n        SELECT 0 AS LateFee; -- No fee if returned within the limit\n    END IF;\nEND //\nDELIMITER ;\n
+-- School Library Management System SQL
+
+-- 1. Create Tables
+CREATE TABLE authors (
+    author_id NUMBER PRIMARY KEY,
+    name VARCHAR2(100) NOT NULL
+);
+
+CREATE TABLE books (
+    book_id NUMBER PRIMARY KEY,
+    title VARCHAR2(200) NOT NULL,
+    author_id NUMBER REFERENCES authors(author_id),
+    publication_year NUMBER,
+    isbn VARCHAR2(20) UNIQUE
+);
+
+CREATE TABLE members (
+    member_id NUMBER PRIMARY KEY,
+    name VARCHAR2(100) NOT NULL,
+    membership_date DATE DEFAULT SYSDATE
+);
+
+CREATE TABLE loans (
+    loan_id NUMBER PRIMARY KEY,
+    member_id NUMBER REFERENCES members(member_id),
+    book_id NUMBER REFERENCES books(book_id),
+    loan_date DATE DEFAULT SYSDATE,
+    return_date DATE
+);
+
+-- 2. Create Sequences
+CREATE SEQUENCE author_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE book_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE member_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE loan_seq START WITH 1 INCREMENT BY 1;
+
+-- 3. Create Indexes
+CREATE INDEX idx_book_title ON books(title);
+
+-- 4. Package Specification
+CREATE OR REPLACE PACKAGE library_pkg AS
+    PROCEDURE add_author(p_name VARCHAR2);
+    PROCEDURE add_book(p_title VARCHAR2, p_author_id NUMBER, p_year NUMBER, p_isbn VARCHAR2);
+    FUNCTION get_author_books(p_author_id NUMBER) RETURN SYS_REFCURSOR;
+END library_pkg;
+
+-- 5. Package Body
+CREATE OR REPLACE PACKAGE BODY library_pkg AS
+    PROCEDURE add_author(p_name VARCHAR2) IS
+    BEGIN
+        INSERT INTO authors(author_id, name) VALUES (author_seq.NEXTVAL, p_name);
+    END add_author;
+
+    PROCEDURE add_book(p_title VARCHAR2, p_author_id NUMBER, p_year NUMBER, p_isbn VARCHAR2) IS
+    BEGIN
+        INSERT INTO books(book_id, title, author_id, publication_year, isbn) VALUES (book_seq.NEXTVAL, p_title, p_author_id, p_year, p_isbn);
+    END add_book;
+
+    FUNCTION get_author_books(p_author_id NUMBER) RETURN SYS_REFCURSOR IS
+        result_cursor SYS_REFCURSOR;
+    BEGIN
+        OPEN result_cursor FOR SELECT * FROM books WHERE author_id = p_author_id;
+        RETURN result_cursor;
+    END get_author_books;
+END library_pkg;
+
+-- 6. Create Triggers
+CREATE OR REPLACE TRIGGER before_insert_loan
+BEFORE INSERT ON loans
+FOR EACH ROW
+BEGIN
+    :NEW.loan_id := loan_seq.NEXTVAL;
+END;
+
+-- 7. Create Views
+CREATE VIEW v_member_loans AS
+SELECT m.name AS member_name, b.title AS book_title, l.loan_date, l.return_date 
+FROM members m 
+JOIN loans l ON m.member_id = l.member_id 
+JOIN books b ON l.book_id = b.book_id;
+
+-- 8. Sample Data
+INSERT INTO authors(author_id, name) VALUES (1, 'George Orwell');
+INSERT INTO books(book_id, title, author_id, publication_year, isbn) VALUES (1, '1984', 1, 1949, '1234567890');
+INSERT INTO members(member_id, name) VALUES (1, 'Alice Smith');
+INSERT INTO loans(loan_id, member_id, book_id, loan_date) VALUES (1, 1, 1, SYSDATE);
