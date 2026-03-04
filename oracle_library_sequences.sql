@@ -1,0 +1,17 @@
+-- CREATE SEQUENCE statements for the Devin Projects library
+
+CREATE SEQUENCE author_seq
+    START WITH 1
+    INCREMENT BY 1;
+
+CREATE SEQUENCE book_seq
+    START WITH 1
+    INCREMENT BY 1;
+
+CREATE SEQUENCE member_seq
+    START WITH 1
+    INCREMENT BY 1;
+
+CREATE SEQUENCE loan_seq
+    START WITH 1
+    INCREMENT BY 1;
