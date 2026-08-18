@@ -1,3 +1,5 @@
+-- SQL script to create a package for library management
+  
 CREATE OR REPLACE PACKAGE library_pkg AS
     PROCEDURE add_book(p_title IN VARCHAR2, p_author IN VARCHAR2);
     PROCEDURE remove_book(p_book_id IN NUMBER);
